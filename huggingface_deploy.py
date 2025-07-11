@@ -186,5 +186,5 @@ if __name__ == "__main__":
 
 # Deploy the model
 if __name__ == "__main__":
-    deployer = HuggingFaceDeployer("your-username/trading-ai-model")
+    deployer = HuggingFaceDeployer("bentzbk/woof_trade_organziation")
     deployer.deploy_to_huggingface("trading_model_v1.pth")
