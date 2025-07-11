@@ -1,10 +1,9 @@
 import gradio as gr
-import torch
 import numpy as np
+import torch
 from model import TradingTransformer, TradingModelTrainer
 import yfinance as yf
 
-# Load the model
 trainer = TradingModelTrainer()
 model = trainer.load_model("trading_model_v1.pth")
 
