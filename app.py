@@ -1,9 +1,9 @@
+import os
 import gradio as gr
 import numpy as np
 import torch
 from huggingface_hub import hf_hub_download
 import yfinance as yf
-import os
 
 from model import TradingTransformer, TradingModelTrainer
 
@@ -11,11 +11,22 @@ HF_MODEL_REPO = "bentzbk/woof_trade_organziation"
 HF_MODEL_FILE = "trading_model_v1.pth"  # change if your model file is named differently
 
 def load_model_from_hf():
-    model_path = hf_hub_download(repo_id=HF_MODEL_REPO, filename=HF_MODEL_FILE, token=os.getenv("HUGGINGFACE_TOKEN"))
-    trainer = TradingModelTrainer()
-    model = trainer.load_model(model_path)
-    return model, trainer
+    print("Downloading model from Hugging Face Hub...")
+    try:
+        model_path = hf_hub_download(
+            repo_id=HF_MODEL_REPO,
+            filename=HF_MODEL_FILE,
+            token=os.getenv("HUGGINGFACE_TOKEN")
+        )
+        print(f"Model downloaded to {model_path}")
+        trainer = TradingModelTrainer()
+        model = trainer.load_model(model_path)
+        return model, trainer
+    except Exception as e:
+        print(f"Failed to download or load model: {e}")
+        raise
 
+print("Starting application...")
 model, trainer = load_model_from_hf()
 
 def predict_stock(symbol, period="1mo"):
@@ -45,6 +56,7 @@ def predict_stock(symbol, period="1mo"):
             "Current Price": f"${data['Close'].iloc[-1]:.2f}"
         }
     except Exception as e:
+        print(f"Error in predict_stock: {e}")
         return f"Error: {str(e)}"
 
 iface = gr.Interface(
@@ -59,4 +71,5 @@ iface = gr.Interface(
 )
 
 if __name__ == "__main__":
+    print("Launching Gradio app on 0.0.0.0:8080")
     iface.launch(server_name="0.0.0.0", server_port=8080)
