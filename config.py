@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 class Config:
     # Server Configuration
@@ -7,14 +6,10 @@ class Config:
     HOST = os.getenv('HOST', '0.0.0.0')
     
     # Hugging Face Configuration
-    # Option 1: Use a local model or disable model loading for now
-    USE_LOCAL_MODEL = True
+    USE_LOCAL_MODEL = os.getenv('USE_LOCAL_MODEL', 'True').lower() == 'true'
     MODEL_PATH = os.getenv('MODEL_PATH', './models/trading_model.pkl')
-    
-    # Option 2: Use an actual existing model from Hugging Face
-    # Uncomment and use a real model if you have one
-    # HF_MODEL_REPO = os.getenv('HF_MODEL_REPO', 'microsoft/DialoGPT-medium')
-    # HF_TOKEN = os.getenv('HF_TOKEN', None)
+    HF_MODEL_REPO = os.getenv('HF_MODEL_REPO', '')  # Leave blank unless using HF
+    HF_TOKEN = os.getenv('HF_TOKEN', None)
     
     # Trading Configuration
     API_KEY = os.getenv('API_KEY', '')
@@ -28,8 +23,6 @@ class Config:
     
     @classmethod
     def validate(cls):
-        """Validate configuration before starting the application"""
-        if not cls.USE_LOCAL_MODEL and not hasattr(cls, 'HF_MODEL_REPO'):
+        if not cls.USE_LOCAL_MODEL and not cls.HF_MODEL_REPO:
             raise ValueError("Either USE_LOCAL_MODEL must be True or HF_MODEL_REPO must be set")
-        
         return True
