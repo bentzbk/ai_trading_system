@@ -1,11 +1,22 @@
 import gradio as gr
 import numpy as np
 import torch
-from model import TradingTransformer, TradingModelTrainer
+from huggingface_hub import hf_hub_download
 import yfinance as yf
+import os
 
-trainer = TradingModelTrainer()
-model = trainer.load_model("trading_model_v1.pth")
+from model import TradingTransformer, TradingModelTrainer
+
+HF_MODEL_REPO = "bentzbk/woof_trade_organziation"
+HF_MODEL_FILE = "trading_model_v1.pth"  # change if your model file is named differently
+
+def load_model_from_hf():
+    model_path = hf_hub_download(repo_id=HF_MODEL_REPO, filename=HF_MODEL_FILE, token=os.getenv("HUGGINGFACE_TOKEN"))
+    trainer = TradingModelTrainer()
+    model = trainer.load_model(model_path)
+    return model, trainer
+
+model, trainer = load_model_from_hf()
 
 def predict_stock(symbol, period="1mo"):
     try:
@@ -17,7 +28,7 @@ def predict_stock(symbol, period="1mo"):
         features = []
         for _, row in recent_data.iterrows():
             features.append([
-                row['Open'], row['High'], row['Low'],
+                row['Open'], row['High'], row['Low'], 
                 row['Close'], row['Volume']
             ])
         features = np.array(features).reshape(1, 30, 5)
