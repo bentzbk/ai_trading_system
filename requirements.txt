@@ -1,5 +1,15 @@
-gradio
 torch
-numpy
+transformers
 pandas
+numpy
+requests
 yfinance
+alpha-vantage
+scikit-learn
+ta
+schedule
+python-dotenv
+huggingface-hub
+datasets
+accelerate
+gradio
