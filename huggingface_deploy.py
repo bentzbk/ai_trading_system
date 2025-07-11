@@ -5,10 +5,10 @@ import os
 from model import TradingTransformer, TradingModelTrainer
 
 class HuggingFaceDeployer:
-    def __init__(self, repo_name="trading-ai-model"):
+    def __init__(self, repo_name="bentzbk/woof_trade_organziation"):
         self.repo_name = repo_name
         self.api = HfApi()
-        
+
     def create_model_card(self):
         """Create model card for Hugging Face"""
         model_card = """
@@ -41,7 +41,7 @@ The model returns:
 - Position size recommendation
 """
         return model_card
-    
+
     def create_gradio_app(self):
         """Create Gradio app for Hugging Face Space"""
         app_code = """
@@ -62,31 +62,31 @@ def predict_stock(symbol, period="1mo"):
         # Get stock data
         ticker = yf.Ticker(symbol)
         data = ticker.history(period=period)
-        
+
         if len(data) < 30:
             return "Error: Not enough data"
-        
+
         # Get the last 30 days of data
         recent_data = data.tail(30)
-        
+
         # Prepare features (simplified)
         features = []
         for _, row in recent_data.iterrows():
             features.append([
-                row['Open'], row['High'], row['Low'], 
+                row['Open'], row['High'], row['Low'],
                 row['Close'], row['Volume']
             ])
-        
+
         features = np.array(features).reshape(1, 30, 5)
-        
+
         # Make prediction
         prediction = trainer.predict(model, features)
-        
+
         action_map = {0: "BUY", 1: "SELL", 2: "HOLD"}
         action = action_map[prediction['action'][0]]
         confidence = prediction['confidence'][0][0]
         position_size = prediction['position_size'][0][0]
-        
+
         return {
             "Symbol": symbol,
             "Action": action,
@@ -94,7 +94,7 @@ def predict_stock(symbol, period="1mo"):
             "Position Size": f"{position_size:.2%}",
             "Current Price": f"${data['Close'].iloc[-1]:.2f}"
         }
-        
+
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -111,23 +111,23 @@ iface = gr.Interface(
 )
 
 if __name__ == "__main__":
-    iface.launch()
+    iface.launch(server_name="0.0.0.0", server_port=8080)
 """
         return app_code
-    
+
     def deploy_to_huggingface(self, model_path):
         """Deploy model to Hugging Face"""
         try:
             # Login to Hugging Face
             login(token=os.getenv('HUGGINGFACE_TOKEN'))
-            
+
             # Create repository
             repo_url = self.api.create_repo(
                 repo_id=self.repo_name,
                 token=os.getenv('HUGGINGFACE_TOKEN'),
                 exist_ok=True
             )
-            
+
             # Upload model file
             upload_file(
                 path_or_fileobj=model_path,
@@ -135,52 +135,52 @@ if __name__ == "__main__":
                 repo_id=self.repo_name,
                 token=os.getenv('HUGGINGFACE_TOKEN')
             )
-            
+
             # Upload model code
             with open("model.py", "r") as f:
                 model_code = f.read()
-            
+
             with open("temp_model.py", "w") as f:
                 f.write(model_code)
-            
+
             upload_file(
                 path_or_fileobj="temp_model.py",
                 path_in_repo="model.py",
                 repo_id=self.repo_name,
                 token=os.getenv('HUGGINGFACE_TOKEN')
             )
-            
+
             # Create and upload app
             app_code = self.create_gradio_app()
             with open("temp_app.py", "w") as f:
                 f.write(app_code)
-            
+
             upload_file(
                 path_or_fileobj="temp_app.py",
                 path_in_repo="app.py",
                 repo_id=self.repo_name,
                 token=os.getenv('HUGGINGFACE_TOKEN')
             )
-            
+
             # Create and upload model card
             model_card = self.create_model_card()
             with open("temp_readme.md", "w") as f:
                 f.write(model_card)
-            
+
             upload_file(
                 path_or_fileobj="temp_readme.md",
                 path_in_repo="README.md",
                 repo_id=self.repo_name,
                 token=os.getenv('HUGGINGFACE_TOKEN')
             )
-            
+
             # Clean up temp files
             os.remove("temp_model.py")
             os.remove("temp_app.py")
             os.remove("temp_readme.md")
-            
+
             print(f"Model deployed successfully to: https://huggingface.co/spaces/{self.repo_name}")
-            
+
         except Exception as e:
             print(f"Deployment failed: {e}")
 
