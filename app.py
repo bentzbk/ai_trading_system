@@ -17,7 +17,7 @@ def predict_stock(symbol, period="1mo"):
         features = []
         for _, row in recent_data.iterrows():
             features.append([
-                row['Open'], row['High'], row['Low'], 
+                row['Open'], row['High'], row['Low'],
                 row['Close'], row['Volume']
             ])
         features = np.array(features).reshape(1, 30, 5)
