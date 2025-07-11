@@ -57,7 +57,7 @@ def automated_training():
         upload_file(
             path_or_fileobj="trading_model_v1.pth",
             path_in_repo="trading_model_v1.pth",
-            repo_id="your-username/trading-ai-model",
+            repo_id="bentzbk/woof_trade_organziation",
             token=os.environ['HUGGINGFACE_TOKEN']
         )
         print("Model uploaded successfully!")
