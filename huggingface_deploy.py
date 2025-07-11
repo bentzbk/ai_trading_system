@@ -1,18 +1,24 @@
-from huggingface_hub import HfApi, Repository, upload_file, login
-import torch
-import json
+"""
+This script deploys your trading model, model code, Gradio app, and model card to a Hugging Face Space.
+It is NOT intended to run as a web server, but as a one-off deployment tool.
+Make sure you have set the HUGGINGFACE_TOKEN environment variable with write access to your target repo.
+"""
+
+from huggingface_hub import HfApi, upload_file, login
 import os
-from model import TradingTransformer, TradingModelTrainer
 
-class HuggingFaceDeployer:
-    def __init__(self, repo_name="spaces/bentzbk/wto"):
-        self.repo_name = repo_name
-        self.api = HfApi()
+# === CONFIGURATION ===
+# Repo id must be in the form "spaces/username/reponame" for Spaces.
+REPO_ID = "spaces/bentzbk/wto"
+MODEL_LOCAL_PATH = "trading_model_v1.pth"  # Update if your model file is named differently
+MODEL_FILE_IN_REPO = "trading_model_v1.pth"
+MODEL_CODE_LOCAL_PATH = "model.py"
+MODEL_CODE_FILE_IN_REPO = "model.py"
+APP_FILE_IN_REPO = "app.py"
+README_FILE_IN_REPO = "README.md"
 
-    def create_model_card(self):
-        """Create model card for Hugging Face"""
-        model_card = """
----
+# === MODEL CARD CONTENT ===
+MODEL_CARD = """---
 title: AI Trading Model
 emoji: 📈
 colorFrom: blue
@@ -40,18 +46,16 @@ The model returns:
 - Confidence score
 - Position size recommendation
 """
-        return model_card
 
-    def create_gradio_app(self):
-        """Create Gradio app for Hugging Face Space"""
-        app_code = """
+# === GRADIO APP CONTENT ===
+# You MUST have a model.py and trading_model_v1.pth in your repo for this app to run!
+APP_CODE = '''
 import gradio as gr
 import torch
 import numpy as np
 import pandas as pd
 from model import TradingTransformer, TradingModelTrainer
 import yfinance as yf
-import json
 
 # Load the model
 trainer = TradingModelTrainer()
@@ -98,7 +102,6 @@ def predict_stock(symbol, period="1mo"):
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Create Gradio interface
 iface = gr.Interface(
     fn=predict_stock,
     inputs=[
@@ -112,79 +115,68 @@ iface = gr.Interface(
 
 if __name__ == "__main__":
     iface.launch(server_name="0.0.0.0", server_port=8080)
-"""
-        return app_code
+'''
 
-    def deploy_to_huggingface(self, model_path):
-        """Deploy model to Hugging Face"""
-        try:
-            # Login to Hugging Face
-            login(token=os.getenv('HUGGINGFACE_TOKEN'))
+class HuggingFaceDeployer:
+    def __init__(self, repo_id):
+        self.repo_id = repo_id
+        self.api = HfApi()
+        self.token = os.getenv('HUGGINGFACE_TOKEN')
+        if not self.token:
+            raise RuntimeError("Please set the HUGGINGFACE_TOKEN environment variable before running this script.")
 
-            # Create repository
-            repo_url = self.api.create_repo(
-                repo_id=self.repo_name,
-                token=os.getenv('HUGGINGFACE_TOKEN'),
-                exist_ok=True
-            )
+    def login(self):
+        print("Logging into Hugging Face Hub...")
+        login(token=self.token)
 
-            # Upload model file
-            upload_file(
-                path_or_fileobj=model_path,
-                path_in_repo="trading_model_v1.pth",
-                repo_id=self.repo_name,
-                token=os.getenv('HUGGINGFACE_TOKEN')
-            )
+    def ensure_repo(self):
+        print(f"Ensuring repo {self.repo_id} exists (creating if needed)...")
+        self.api.create_repo(
+            repo_id=self.repo_id,
+            token=self.token,
+            repo_type="space",  # makes sure it's a Space, not a Model repo!
+            exist_ok=True,
+            space_sdk="gradio"
+        )
 
-            # Upload model code
-            with open("model.py", "r") as f:
-                model_code = f.read()
+    def upload_bytes(self, content: str, path_in_repo: str):
+        print(f"Uploading in-memory content to {path_in_repo} ...")
+        upload_file(
+            path_or_fileobj=content.encode("utf-8"),
+            path_in_repo=path_in_repo,
+            repo_id=self.repo_id,
+            token=self.token
+        )
 
-            with open("temp_model.py", "w") as f:
-                f.write(model_code)
+    def upload_local_file(self, local_path: str, path_in_repo: str):
+        print(f"Uploading local file {local_path} to {path_in_repo} ...")
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(f"File {local_path} not found!")
+        upload_file(
+            path_or_fileobj=local_path,
+            path_in_repo=path_in_repo,
+            repo_id=self.repo_id,
+            token=self.token
+        )
 
-            upload_file(
-                path_or_fileobj="temp_model.py",
-                path_in_repo="model.py",
-                repo_id=self.repo_name,
-                token=os.getenv('HUGGINGFACE_TOKEN')
-            )
+    def deploy(self):
+        self.login()
+        self.ensure_repo()
 
-            # Create and upload app
-            app_code = self.create_gradio_app()
-            with open("temp_app.py", "w") as f:
-                f.write(app_code)
+        # Upload the model file
+        self.upload_local_file(MODEL_LOCAL_PATH, MODEL_FILE_IN_REPO)
 
-            upload_file(
-                path_or_fileobj="temp_app.py",
-                path_in_repo="app.py",
-                repo_id=self.repo_name,
-                token=os.getenv('HUGGINGFACE_TOKEN')
-            )
+        # Upload model code
+        self.upload_local_file(MODEL_CODE_LOCAL_PATH, MODEL_CODE_FILE_IN_REPO)
 
-            # Create and upload model card
-            model_card = self.create_model_card()
-            with open("temp_readme.md", "w") as f:
-                f.write(model_card)
+        # Upload app.py
+        self.upload_bytes(APP_CODE, APP_FILE_IN_REPO)
 
-            upload_file(
-                path_or_fileobj="temp_readme.md",
-                path_in_repo="README.md",
-                repo_id=self.repo_name,
-                token=os.getenv('HUGGINGFACE_TOKEN')
-            )
+        # Upload model card/README
+        self.upload_bytes(MODEL_CARD, README_FILE_IN_REPO)
 
-            # Clean up temp files
-            os.remove("temp_model.py")
-            os.remove("temp_app.py")
-            os.remove("temp_readme.md")
+        print(f"\nModel and app deployed successfully to: https://huggingface.co/spaces/bentzbk/wto\n")
 
-            print(f"Model deployed successfully to: https://huggingface.co/spaces/bentzbk/wto")
-
-        except Exception as e:
-            print(f"Deployment failed: {e}")
-
-# Deploy the model
 if __name__ == "__main__":
-    deployer = HuggingFaceDeployer("spaces/bentzbk/wto")
-    deployer.deploy_to_huggingface("trading_model_v1.pth")
+    deployer = HuggingFaceDeployer(REPO_ID)
+    deployer.deploy()
