@@ -1,15 +1,22 @@
-torch
-transformers
-pandas
-numpy
-requests
-yfinance
-alpha-vantage
-scikit-learn
-ta
-schedule
-python-dotenv
-huggingface-hub
-datasets
-accelerate
-gradio
+flask==2.3.3
+gunicorn==21.2.0
+requests==2.31.0
+pandas==2.1.0
+numpy==1.24.3
+scikit-learn==1.3.0
+joblib==1.3.2
+
+# Optional: Only include if you actually want to use Hugging Face models
+# transformers==4.33.0
+# torch==2.0.1
+
+# Database
+sqlalchemy==2.0.20
+
+# Logging and monitoring
+python-dotenv==1.0.0
+
+# Trading APIs (uncomment as needed)
+# ccxt==4.0.0  # For cryptocurrency exchanges
+# yfinance==0.2.18  # For stock data
+# alpha-vantage==2.3.1  # For Alpha Vantage API
