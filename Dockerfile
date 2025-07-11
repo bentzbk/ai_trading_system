@@ -14,11 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your code
 COPY . .
 
-# Expose port for Cloud Run (Gradio/Flask/FastAPI usually use 8080)
 EXPOSE 8080
 
-# Set environment variables for Python
 ENV PYTHONUNBUFFERED True
 
-# Run your Gradio (or other) app
-CMD ["python", "huggingface_deploy.py"]
+CMD ["python", "app.py"]
