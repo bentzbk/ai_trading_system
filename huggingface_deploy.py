@@ -5,7 +5,7 @@ import os
 from model import TradingTransformer, TradingModelTrainer
 
 class HuggingFaceDeployer:
-    def __init__(self, repo_name="bentzbk/woof_trade_organziation"):
+    def __init__(self, repo_name="spaces/bentzbk/wto"):
         self.repo_name = repo_name
         self.api = HfApi()
 
@@ -179,12 +179,12 @@ if __name__ == "__main__":
             os.remove("temp_app.py")
             os.remove("temp_readme.md")
 
-            print(f"Model deployed successfully to: https://huggingface.co/spaces/{self.repo_name}")
+            print(f"Model deployed successfully to: https://huggingface.co/spaces/bentzbk/wto")
 
         except Exception as e:
             print(f"Deployment failed: {e}")
 
 # Deploy the model
 if __name__ == "__main__":
-    deployer = HuggingFaceDeployer("bentzbk/woof_trade_organziation")
+    deployer = HuggingFaceDeployer("spaces/bentzbk/wto")
     deployer.deploy_to_huggingface("trading_model_v1.pth")
